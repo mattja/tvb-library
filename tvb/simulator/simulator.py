@@ -404,6 +404,9 @@ class Simulator(core.Type):
             state = self.integrator.scheme(state, self.model.dfun, node_coupling, local_coupling, stimulus)
             self._loop_update_history(step, n_reg, state)
             output = self._loop_monitor_output(step, state)
+            # Also record node coupling input in same format as Raw monitor:
+            time = step * self.integrator.dt
+            output.append([time, node_coupling])
             if output is not None:
                 yield output
 
