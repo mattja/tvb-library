@@ -332,6 +332,77 @@ class Sigmoidal(Coupling):
         return self.cmin + ((self.cmax - self.cmin) / (1.0 + numpy.exp(-self.a *((gx - self.midpoint) / self.sigma))))
 
 
+class SimplePreSigmoidal(Coupling):
+    r"""
+    Provides a sigmoid shape identical to Sigmoidal() but with
+    summation performed after the sigmoid rather than before.
+
+    This is mathematically equivalent to using HyperbolicTangent() with
+    HyperbolicTangent.a=0.5 and HyperbolicTangent.sigma = 2.0/Sigmoidal.a
+    but our implementation here is simpler to read (and less efficient as it
+    does not use sparse computation).
+
+    .. math::
+        c_{min} + (c_{max} - c_{min}) / (1.0 + \exp(-a(x-midpoint)/\sigma))
+    """
+
+    cmin = arrays.FloatArray(
+        label=":math:`c_{min}`",
+        default=numpy.array([-1.0,]),
+        range=basic.Range(lo=-1000.0, hi=1000.0, step=10.0),
+        doc="""Minimum of the sigmoid function""",
+        order=1)
+
+    cmax = arrays.FloatArray(
+        label=":math:`c_{max}`",
+        default=numpy.array([1.0,]),
+        range=basic.Range(lo=-1000.0, hi=1000.0, step=10.0),
+        doc="""Maximum of the sigmoid function""",
+        order=2)
+
+    midpoint = arrays.FloatArray(
+        label="midpoint",
+        default=numpy.array([0.0,]),
+        range=basic.Range(lo=-1000.0, hi=1000.0, step=10.0),
+        doc="Midpoint of the linear portion of the sigmoid",
+        order=3)
+
+    a = arrays.FloatArray(
+        label=r":math:`a`",
+        default=numpy.array([1.0,]),
+        range=basic.Range(lo=0.01, hi=1000.0, step=10.0),
+        doc="Scaling of sigmoidal",
+        order=4)
+
+    sigma = arrays.FloatArray(
+        label=r":math:`\sigma`",
+        default=numpy.array([230.0,]),
+        range=basic.Range(lo=0.01, hi=1000.0, step=10.0),
+        doc="Standard deviation of the sigmoidal",
+        order=5)
+
+    def __str__(self):
+        return simple_gen_astr(self, 'cmin cmax midpoint a sigma')
+
+    """
+    Args:
+      x_i  current state. array of shape (nnodes,ncvars,1,nmodes)
+             where x_i[i, n, 0, m] gives current state of the nth output
+             variable of mode m of the ith node.
+      x_j  delayed state. array of shape (nnodes,ncvars,nnodes,nmodes)
+             where x_j[i, n, j, m] gives delayed view of the nth output
+             variable of mode m of the jth node as seen from
+             the ith node, based on delay from node j to node i.
+    Returns:
+     array p of shape (nnodes,ncvars,nnodes,nmodes) where p[i, :, j, :] gives
+       delayed view of the nonlinearly transformed state of the jth node as
+       seen from the ith node.
+    """
+    def pre(self, x_i, x_j):
+        return self.cmin + ((self.cmax - self.cmin) / (1.0 + 
+                numpy.exp(-self.a *((x_j - self.midpoint) / self.sigma))))
+
+
 class SigmoidalJansenRit(Coupling):
     r"""
     Provides a sigmoidal coupling function as described in the 
